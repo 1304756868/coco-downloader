@@ -72,7 +72,7 @@ export default function Home() {
   // Download Manager State
   const [downloadTasks, setDownloadTasks] = useState<DownloadTask[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const downloadEnabled = process.env.NEXT_PUBLIC_ENABLE_DOWNLOAD === "1";
+  const [downloadEnabled, setDownloadEnabled] = useState(true);
 
   const openSourceUrl = async (item: MusicItem) => {
     const res = await fetch(
@@ -245,6 +245,21 @@ export default function Home() {
       audioRef.current.volume = volume;
     }
   }, [volume]);
+
+  useEffect(() => {
+    const env = (window as Window & { __COCO_ENV?: { ENABLE_DOWNLOAD?: string } }).__COCO_ENV;
+    if (env?.ENABLE_DOWNLOAD === "0") {
+      setDownloadEnabled(false);
+      return;
+    }
+    if (env?.ENABLE_DOWNLOAD === "1") {
+      setDownloadEnabled(true);
+    }
+  }, []);
+
+  const listGridTemplate = downloadEnabled
+    ? "grid-cols-[40px_1fr_40px] md:grid-cols-[50px_2fr_1.5fr_120px]"
+    : "grid-cols-[1fr_40px] md:grid-cols-[2fr_1.5fr_80px]";
 
   const executeDownload = async (task: DownloadTask) => {
     try {
@@ -664,20 +679,27 @@ export default function Home() {
                 className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden mb-24"
               >
                 {/* List Header */}
-                <div className="grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_2fr_1.5fr_120px] gap-4 p-4 border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-sm font-medium text-slate-500 dark:text-slate-400">
-                  <div className="flex justify-center items-center">
-                    <button 
-                      onClick={toggleAll}
-                      className={cn(
-                        "w-5 h-5 rounded border flex items-center justify-center transition-colors cursor-pointer",
-                        selectedIds.size === results.length && results.length > 0
-                          ? "bg-sky-500 border-sky-500 text-white" 
-                          : "border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500"
-                      )}
-                    >
-                      {selectedIds.size === results.length && results.length > 0 && <Check className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
+                <div
+                  className={cn(
+                    "grid gap-4 p-4 border-b border-slate-50 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50 text-sm font-medium text-slate-500 dark:text-slate-400",
+                    listGridTemplate
+                  )}
+                >
+                  {downloadEnabled ? (
+                    <div className="flex justify-center items-center">
+                      <button 
+                        onClick={toggleAll}
+                        className={cn(
+                          "w-5 h-5 rounded border flex items-center justify-center transition-colors cursor-pointer",
+                          selectedIds.size === results.length && results.length > 0
+                            ? "bg-sky-500 border-sky-500 text-white" 
+                            : "border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500"
+                        )}
+                      >
+                        {selectedIds.size === results.length && results.length > 0 && <Check className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  ) : null}
                   <div>歌曲</div>
                   <div className="hidden md:block">歌手</div>
                   <div className="text-right pr-4 md:pr-4">操作</div>
@@ -696,23 +718,26 @@ export default function Home() {
                         animate={{ opacity: 1 }}
                         onDoubleClick={() => handlePlay(item)}
                         className={cn(
-                          "grid grid-cols-[40px_1fr_40px] md:grid-cols-[50px_2fr_1.5fr_120px] gap-4 p-4 items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-200 group cursor-pointer select-none active:scale-[0.99] rounded-xl",
+                          "grid gap-4 p-4 items-center hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all duration-200 group cursor-pointer select-none active:scale-[0.99] rounded-xl",
+                          listGridTemplate,
                           isActive && "bg-sky-50/50 dark:bg-sky-900/20"
                         )}
                       >
-                        <div className="flex justify-center items-center">
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); toggleSelection(item.id); }}
-                            className={cn(
-                              "w-5 h-5 rounded border flex items-center justify-center transition-colors cursor-pointer",
-                              isSelected 
-                                ? "bg-sky-500 border-sky-500 text-white" 
-                                : "border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500"
-                            )}
-                          >
-                            {isSelected && <Check className="w-3.5 h-3.5" />}
-                          </button>
-                        </div>
+                        {downloadEnabled ? (
+                          <div className="flex justify-center items-center">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); toggleSelection(item.id); }}
+                              className={cn(
+                                "w-5 h-5 rounded border flex items-center justify-center transition-colors cursor-pointer",
+                                isSelected 
+                                  ? "bg-sky-500 border-sky-500 text-white" 
+                                  : "border-slate-300 dark:border-slate-600 hover:border-sky-400 dark:hover:border-sky-500"
+                              )}
+                            >
+                              {isSelected && <Check className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        ) : null}
 
                         <div className="flex items-center gap-3 overflow-hidden">
                           <div 
@@ -763,17 +788,15 @@ export default function Home() {
 
                         <div className="flex justify-end pr-2 md:pr-2 gap-2">
                           <SourceLinkButton item={item} />
-                          <button
-                            onClick={(e) => { e.stopPropagation(); downloadOne(item); }}
-                            className="p-2 text-slate-400 dark:text-slate-500 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
-                            title={downloadEnabled ? "下载" : "打开源链接"}
-                          >
-                            {downloadEnabled ? (
+                          {downloadEnabled ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); downloadOne(item); }}
+                              className="p-2 text-slate-400 dark:text-slate-500 hover:text-sky-500 dark:hover:text-sky-400 hover:bg-sky-50 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
+                              title="下载"
+                            >
                               <Download className="w-5 h-5" />
-                            ) : (
-                              <ExternalLink className="w-5 h-5" />
-                            )}
-                          </button>
+                            </button>
+                          ) : null}
                         </div>
                       </motion.div>
                     );
@@ -793,18 +816,19 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Download Drawer */}
-      <DownloadDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        tasks={downloadTasks}
-        onRemoveTask={(taskId) => setDownloadTasks(prev => prev.filter(t => t.id !== taskId))}
-        onClearCompleted={() => setDownloadTasks(prev => prev.filter(t => t.status === 'downloading' || t.status === 'pending'))}
-      />
+      {downloadEnabled ? (
+        <DownloadDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          tasks={downloadTasks}
+          onRemoveTask={(taskId) => setDownloadTasks(prev => prev.filter(t => t.id !== taskId))}
+          onClearCompleted={() => setDownloadTasks(prev => prev.filter(t => t.status === 'downloading' || t.status === 'pending'))}
+        />
+      ) : null}
 
       {/* Floating Download Toggle Button (Bottom Right) */}
       <AnimatePresence>
-        {!isDrawerOpen && downloadTasks.length > 0 && (
+        {downloadEnabled && !isDrawerOpen && downloadTasks.length > 0 && (
           <motion.button
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
@@ -831,7 +855,7 @@ export default function Home() {
 
       {/* Floating Batch Action Bar */}
       <AnimatePresence>
-        {selectedIds.size > 0 && (
+        {downloadEnabled && selectedIds.size > 0 && (
           <motion.div
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
